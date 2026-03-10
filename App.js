@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider, useDispatch } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import AppLoader from './components/AppLoader';
@@ -22,10 +23,12 @@ export default function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={<AppLoader label="Restoring session..." />} persistor={persistor}>
-        <NavigationContainer>
-          <AppBootstrap />
-          <StatusBar style="dark" />
-        </NavigationContainer>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <AppBootstrap />
+            <StatusBar style="dark" />
+          </NavigationContainer>
+        </SafeAreaProvider>
       </PersistGate>
     </Provider>
   );

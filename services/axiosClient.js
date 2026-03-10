@@ -10,7 +10,7 @@ export const clearAxiosAuthToken = () => {
   authToken = null;
 };
 
-const mapAxiosError = (error) => {
+export const mapAxiosError = (error) => {
   if (error.response) {
     return {
       status: error.response.status,
@@ -43,9 +43,12 @@ export const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use((config) => {
+  config.headers = config.headers || {};
+
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`;
   }
+
   return config;
 });
 

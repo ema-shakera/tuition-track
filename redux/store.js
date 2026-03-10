@@ -10,16 +10,23 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist';
-import { authReducer } from './slices';
+import { authReducer, dashboardReducer } from './slices';
+
+const authPersistConfig = {
+  key: 'auth',
+  storage: AsyncStorage,
+  whitelist: ['user', 'userToken'],
+};
 
 const rootReducer = combineReducers({
-  auth: authReducer,
+  auth: persistReducer(authPersistConfig, authReducer),
+  dashboard: dashboardReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth'],
+  blacklist: ['auth'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

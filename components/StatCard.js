@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function StatCard({
+function StatCard({
   label,
   value,
   caption,
@@ -28,6 +28,8 @@ export default function StatCard({
     </View>
   );
 }
+
+export default React.memo(StatCard);
 
 const styles = StyleSheet.create({
   card: {

@@ -22,7 +22,15 @@ const THEME = {
   },
 };
 
-export default function StatusBanner({ type = 'info', title, message, onClose, style }) {
+export default function StatusBanner({
+  type = 'info',
+  title,
+  message,
+  onClose,
+  actionLabel,
+  onAction,
+  style,
+}) {
   const palette = THEME[type] || THEME.info;
 
   return (
@@ -37,6 +45,16 @@ export default function StatusBanner({ type = 'info', title, message, onClose, s
       <View style={styles.content}>
         {title ? <Text style={[styles.title, { color: palette.titleColor }]}>{title}</Text> : null}
         {message ? <Text style={[styles.message, { color: palette.bodyColor }]}>{message}</Text> : null}
+        {actionLabel && onAction ? (
+          <Pressable
+            onPress={onAction}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+          >
+            <Text style={[styles.actionText, { color: palette.bodyColor }]}>{actionLabel}</Text>
+          </Pressable>
+        ) : null}
       </View>
       {onClose ? (
         <Pressable
@@ -81,6 +99,19 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  actionButton: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  actionText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   pressed: {
     opacity: 0.75,

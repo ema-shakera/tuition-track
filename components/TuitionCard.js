@@ -7,7 +7,7 @@ const STATUS_THEME = {
   overdue: { backgroundColor: '#FEE2E2', textColor: '#991B1B' },
 };
 
-export default function TuitionCard({
+function TuitionCard({
   studentName,
   subject,
   amount,
@@ -48,6 +48,8 @@ export default function TuitionCard({
     </Pressable>
   );
 }
+
+export default React.memo(TuitionCard);
 
 const styles = StyleSheet.create({
   card: {

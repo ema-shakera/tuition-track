@@ -8,7 +8,7 @@ const STATUS_THEME = {
   overdue: { backgroundColor: '#FEE2E2', textColor: '#991B1B' },
 };
 
-export default function HomeworkCard({
+function HomeworkCard({
   title,
   subject,
   dueDate,
@@ -47,6 +47,8 @@ export default function HomeworkCard({
     </Pressable>
   );
 }
+
+export default React.memo(HomeworkCard);
 
 const styles = StyleSheet.create({
   card: {
