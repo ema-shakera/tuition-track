@@ -1,198 +1,201 @@
 # Tuition Track
 
-Multi-tenant academic tracking system using Node.js, Express, MongoDB, and Mongoose.
+Tuition Track is a multi-tenant academic tracking system with:
 
-Current implementation scope is focused on `backend/` with tenant-safe teacher data isolation, role-based access, audit logging, notification outbox, monthly progress cache, and monthly report metadata storage.
+- `backend/`: Node.js + Express + MongoDB API
+- `frontend/`: React Native (Expo) mobile app
 
-## Project Structure
+This README explains how to integrate frontend and backend, how users flow through the app, and how to run everything locally.
 
-- `backend/`: implemented API server and data layer
-- `frontend/`: present in workspace, not documented here in detail
+## Repository Structure
 
-## Backend Implementation Summary
+- `backend/`: API server, tenant-isolated data model, audit logs, outbox, reports metadata
+- `frontend/`: Expo app with auth flow, role-based navigation, dashboard UI and services
 
-Implemented inside `tuition-track/backend` only.
+For module-level details:
 
-### Foundation (Chunk 0)
+- Backend details: `backend/README.md`
+- Frontend details: `frontend/README.md`
 
-- Express app bootstrap and server lifecycle
-- Environment validation
-- MongoDB connection handling
-- Standard error handling middleware
-- Auth middleware and role guards
-- Tenant helper utilities
-- Pagination and sorting helpers
+## Current Integration State
 
-### Domain Chunks Completed
+The frontend currently has a hybrid implementation:
 
-1. `users` authentication (`register`, `login`, `me`)
-2. `teacherProfiles` (`create/get/update own profile`)
-3. `studentProfiles` (teacher-managed profiles + student self endpoint)
-4. `tuitions` (teacher-scoped CRUD, pause, soft delete)
-5. `classSessions` (teacher-scoped create/list/delete)
-6. `homework` (teacher-scoped create/list/get/update/soft delete)
-7. `homeworkComments` (teacher and student comments with access rules)
-8. `payments` (monthly upsert, unpaid list, paid/unpaid toggles)
-9. `monthlyProgress` (cached monthly recompute and read endpoints)
-10. `activityLogs` (audit trail model + logging on mutations)
-11. `notificationOutbox` (outbox model, enqueue, processor, routes)
-12. `monthlyReports` (external PDF metadata, teacher + student access)
+- Firebase Auth + Firestore are used for core app data flows
+- Axios + backend endpoints are available for backend-connected features (for example reports)
 
-### Transaction Flow Improvement
+The backend is fully implemented for the MongoDB schema/API tracks.
 
-Implemented transactional tuition creation flow:
+## Recommended Integration Direction
 
-- Create tuition
-- Create activity log
-- Enqueue notification outbox entry
-- Commit as one Mongo transaction
+Use backend APIs as the domain source of truth and progressively migrate frontend data operations from Firestore service calls to backend route calls.
 
-## Implemented Collections (Models)
+Target backend API groups:
 
-- `User`
-- `TeacherProfile`
-- `StudentProfile`
-- `Tuition`
-- `ClassSession`
-- `Homework`
-- `HomeworkComment`
-- `Payment`
-- `MonthlyProgress`
-- `ActivityLog`
-- `NotificationOutbox`
-- `MonthlyReport`
+- `/api/auth`
+- `/api/teacher-profiles`
+- `/api/student-profiles`
+- `/api/tuitions`
+- `/api/class-sessions`
+- `/api/homework`
+- `/api/homework-comments`
+- `/api/payments`
+- `/api/monthly-progress`
+- `/api/monthly-reports`
+- `/api/activity-logs`
 
-## API Base
+## Frontend <-> Backend Integration Steps
 
-- Health: `GET /health`
-- Readiness: `GET /ready`
-- API base prefix: `/api`
+1. Set backend base URL in frontend env:
+- `EXPO_PUBLIC_API_BASE_URL=http://<your-ip>:8002`
 
-## Implemented Route Map
+2. Run backend and verify it is reachable:
+- `GET /health` should return `{"status":"ok"}`
 
-### Auth
+3. Keep Axios auth token wiring active:
+- Frontend already sets `Authorization: Bearer <token>` using `setAxiosAuthToken`
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
+4. Migrate service-by-service:
+- Replace Firestore CRUD inside `frontend/services/dashboardApi.js` with backend Axios calls
+- Map backend responses into existing Redux payload shapes (`stats`, `homeworkItems`, `tuitionItems`) or update slices accordingly
 
-### Teacher Profiles
+5. Align auth strategy:
+- Pick one production path:
+- Path A: backend auth (`/api/auth`) as primary identity/session
+- Path B: Firebase auth primary, with backend trust/token exchange layer
 
-- `POST /api/teacher-profiles`
-- `GET /api/teacher-profiles/me`
-- `PATCH /api/teacher-profiles/me`
+6. Validate role and tenant rules end-to-end:
+- Teacher can mutate domain entities
+- Student can only access allowed student actions (comments/read-only report paths)
 
-### Student Profiles
+## User Flow
 
-- `GET /api/student-profiles/me`
-- `POST /api/student-profiles`
-- `GET /api/student-profiles`
-- `GET /api/student-profiles/:profileId`
-- `PATCH /api/student-profiles/:profileId`
+### Unauthenticated Flow
 
-### Tuitions
+1. App opens -> session restore runs.
+2. If no session, user sees:
+- `Entry`
+- `Login`
+- `Register`
 
-- `POST /api/tuitions`
-- `GET /api/tuitions`
-- `GET /api/tuitions/:tuitionId`
-- `PATCH /api/tuitions/:tuitionId`
-- `PATCH /api/tuitions/:tuitionId/pause`
-- `DELETE /api/tuitions/:tuitionId`
+### Email Verification Flow
 
-### Class Sessions
+1. User registers.
+2. User receives verification email.
+3. Until verified, app routes to `VerifyEmail`.
+4. After verification refresh, user enters main app.
 
-- `POST /api/class-sessions`
-- `GET /api/class-sessions`
-- `DELETE /api/class-sessions/:sessionId`
+### Authenticated Flow
 
-### Homework
+1. Verified user enters `Home` screen.
+2. User navigates to `TuitionDetail` for detailed entity data.
+3. Role-based behavior applies:
+- Teacher: manage tuition, homework, classes, payments, reports
+- Student: limited access and comment/report views based on policy
 
-- `POST /api/homework`
-- `GET /api/homework`
-- `GET /api/homework/:homeworkId`
-- `PATCH /api/homework/:homeworkId`
-- `DELETE /api/homework/:homeworkId`
+## Run Locally
 
-### Homework Comments
+## Prerequisites
 
-- `POST /api/homework-comments`
-- `GET /api/homework-comments/:homeworkId`
+- Node.js 18+
+- npm
+- MongoDB instance (local or Atlas)
+- Expo CLI/runtime support (through `npx expo`)
 
-### Payments
-
-- `POST /api/payments`
-- `GET /api/payments`
-- `GET /api/payments/unpaid`
-- `PATCH /api/payments/:paymentId/mark-paid`
-- `PATCH /api/payments/:paymentId/mark-unpaid`
-
-### Monthly Progress
-
-- `POST /api/monthly-progress/recompute`
-- `GET /api/monthly-progress`
-- `GET /api/monthly-progress/:tuitionId/:month`
-
-### Activity Logs
-
-- `GET /api/activity-logs`
-
-### Notification Outbox
-
-- `POST /api/notification-outbox`
-- `GET /api/notification-outbox`
-- `POST /api/notification-outbox/process`
-
-### Monthly Reports
-
-- `POST /api/monthly-reports`
-- `GET /api/monthly-reports`
-- `GET /api/monthly-reports/student/me`
-- `GET /api/monthly-reports/:reportId`
-- `DELETE /api/monthly-reports/:reportId`
-
-## Access Control (Implemented)
-
-- Teacher and student roles are supported
-- Most mutation endpoints are teacher-only
-- Students are limited to:
-  - viewing own profile endpoint
-  - commenting on accessible homework
-  - reading accessible monthly report endpoints
-
-## Environment Variables
-
-Required:
-
-- `MONGODB_URI`
-- `JWT_SECRET`
-
-Optional:
-
-- `PORT` (default: `8002`)
-- `NODE_ENV` (default: `development`)
-- `CORS_ORIGIN` (default: `*`)
-- `JWT_EXPIRES_IN` (default: `7d`)
-- `OUTBOX_PROCESSOR_ENABLED` (default: `false`)
-- `OUTBOX_PROCESSOR_INTERVAL_MS` (default: `30000`)
-- `OUTBOX_PROCESSOR_BATCH_SIZE` (default: `20`)
-
-## Local Run
+## 1) Backend Setup
 
 From `tuition-track/backend`:
 
 ```bash
 npm install
+```
+
+Create `.env` in `backend/` with at least:
+
+```env
+MONGODB_URI=<your-mongodb-uri>
+JWT_SECRET=<your-jwt-secret>
+PORT=8002
+```
+
+Optional backend variables:
+
+```env
+NODE_ENV=development
+CORS_ORIGIN=*
+JWT_EXPIRES_IN=7d
+OUTBOX_PROCESSOR_ENABLED=false
+OUTBOX_PROCESSOR_INTERVAL_MS=30000
+OUTBOX_PROCESSOR_BATCH_SIZE=20
+```
+
+Start backend:
+
+```bash
 npm run start
 ```
 
-For development mode:
+## 2) Frontend Setup
+
+From `tuition-track/frontend`:
 
 ```bash
-npm run dev
+npm install
 ```
 
-## Current Status
+Set required Expo public env vars (Firebase + API base URL). Example:
 
-- Backend implementation for schema chunks is in place
-- Core multi-tenant logic, auditability, and outbox architecture are implemented
-- Next improvements are mainly hardening and test coverage (integration tests and transaction expansion on other multi-write flows)
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=<...>
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=<...>
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=<...>
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=<...>
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<...>
+EXPO_PUBLIC_FIREBASE_APP_ID=<...>
+EXPO_PUBLIC_API_BASE_URL=http://<your-ip>:8002
+EXPO_PUBLIC_REPORT_DOWNLOAD_ENDPOINT=/api/reports/tuition
+```
+
+Start frontend:
+
+```bash
+npm run start
+```
+
+Then run on your target:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## 3) Run Both Together
+
+Use two terminals:
+
+1. Terminal A:
+- `cd tuition-track/backend && npm run start`
+
+2. Terminal B:
+- `cd tuition-track/frontend && npm run start`
+
+## Basic Verification Checklist
+
+1. Backend:
+- `GET /health` returns 200
+- `GET /ready` returns 200 after DB connect
+
+2. Frontend:
+- App launches and shows auth screens when signed out
+- Register/login flow works
+- Verified users can reach `Home`
+
+3. Integration:
+- Frontend can reach backend using `EXPO_PUBLIC_API_BASE_URL`
+- Authenticated requests include bearer token
+
+## Notes
+
+- Backend and frontend READMEs contain implementation-specific details and remaining work.
+- For chunk-by-chunk continuation, keep implementation isolated to each folder (`backend/` or `frontend/`) per change scope.
